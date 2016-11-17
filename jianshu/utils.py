@@ -53,6 +53,22 @@ def get_article(url):
         articles_list.append({'id':art_id, 'views':views_count, 'comments':comments_count, 'likes':likes_count, 'rewards':rewards_count})
     return articles_list
 
+def get_collection(url):
+    '''获取专题列表
+    http://www.jianshu.com/collections
+    '''
+    collection_list = []
+    content = get_content(url)
+    soup = BeautifulSoup(content, 'lxml')
+    collections = soup.findAll('a', attrs={'class':'avatar'})
+    if not collections:
+        return collection_list
+    for coll in collections:
+        coll_id = coll['href'].replace('/collection/', '')
+        logger.info(coll_id)
+        collection_list.append(coll_id)
+    return collection_list
+
 def saveImagesFromUrl(images, filePath):
     logger.info('sum of the  images: %d ' % len(images))
     if not images:
