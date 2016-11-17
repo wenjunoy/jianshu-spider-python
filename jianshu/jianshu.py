@@ -14,7 +14,7 @@ import sys
 import requests
 import cookielib
 
-from utils import saveImagesFromUrl, get_content, get_article
+from utils import saveImagesFromUrl, get_content, get_article, get_collection
 
 logger = logging.getLogger("jianshu")
 BASE_URL = 'http://www.jianshu.com'
@@ -287,40 +287,82 @@ class Collection():
                 # logger.info(user_id)
 
 
+
+
 class HomePage():
     def __init__(self):
         self.collection = BASE_URL + '/collections'
 
-    def get_collection_list(self, max_get = 30):
+    def get_articles_hot():
+        pass
+
+    def get_articles_7days_hot():
+        pass
+
+    def get_articles_30days_hot():
+        pass
+
+    def get_collections_hot(self, order_by='score', max_get = 10000):
+        '''order_by : {score（热门排序）, likes_count（关注度）}
+        '''
         page = 1
         collection_list= []
         while True:
-            url = self.collection + '?page=' +str(page)
-            content = get_content(url)
-            soup = BeautifulSoup(content, 'lxml')
-            collections = soup.findAll('a', attrs={'class':'avatar'})
-            if not collections:
+            url = self.collection + '?order_by='+order_by+ '&page=' +str(page)
+            page +=1
+            collections = get_collection(url)
+            if len(collections) == 0:
                 logger.info(u'一共获取 %d 个专题' % len(collection_list))
                 return collection_list
-            for coll in collections:
-                coll_id = coll['href'].replace('/collection/', '')
-                logger.info(coll_id)
-                collection_list.append(coll_id)
-                if len(collection_list) >= max_get:
-                    logger.info(u'一共获取 %d 个专题' % len(collection_list))
-                    return collection_list
-
+            collection_list.extend(collections)
+            if len(collection_list) >= max_get:
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
+                return collection_list
         return collection_list
 
+    def get_collections_recommend(self, order_by = 'newly_added_at', max_get=10000):
+        '''order_by = {newly_added_at （最新更新）, score（热门排序）, likes_count（关注度）}
+        '''
+        collection_list= []
+        page = 1
+        while True:
+            url = self.collection + '?category_id=58' +'&order_by='+order_by +'&page=' +str(page)
+            page+=1
+            collections = get_collection(url)
+            if len(collections) == 0:
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
+                return collection_list
+            collection_list.extend(collections)
+            if len(collection_list) >= max_get:
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
+                return collection_list
+        return collection_list
 
+    def get_collections_city(self, order_by = 'newly_added_at', max_get=30):
+        '''order_by = {newly_added_at（最新更新）, likes_count（关注度）}
+        '''
+        collection_list= []
+        page = 1
+        while True:
+            url = self.collection + '?category_id=69' +'&order_by='+order_by +'&page=' +str(page)
+            page+=1
+            collections = get_collection(url)
+            if len(collections) == 0:
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
+                return collection_list
+            collection_list.extend(collections)
+            if len(collection_list) >= max_get:
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
+                return collection_list
+        return collection_list
 
 if __name__ == '__main__':
 
     logging.basicConfig(format='%(asctime)s : %(threadName)s : %(levelname)s : %(message)s', level=logging.INFO)
     logging.info("running %s" % " ".join(sys.argv))
-    art = Article()
-    # art.get_article_text()
-    art.get_base_info()
+    # art = Article()
+    # # art.get_article_text()
+    # art.get_base_info()
 
     # user = User()
     # user.get_following()
@@ -332,7 +374,10 @@ if __name__ == '__main__':
     # note.get_article_list()
     # logger.info('hahaha')
 
-    # home = HomePage()
-    # home.get_collection_list()
+    home = HomePage()
+    home.get_collections_hot()
+    # home.get_collections_recommend()
+    # home.get_collections_city()
+
 
     pass
