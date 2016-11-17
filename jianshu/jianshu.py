@@ -12,28 +12,13 @@ import time
 import logging
 import sys
 import requests
-from requests.adapters import HTTPAdapter
 import cookielib
+
+from utils import saveImagesFromUrl, get_content, get_article
 
 logger = logging.getLogger("jianshu")
 BASE_URL = 'http://www.jianshu.com'
 
-
-def get_content(url):
-    headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36",
-        'Host' : 'www.jianshu.com',
-    }
-    # logger.info(headers)
-    req = urllib2.Request(url = url, headers = headers)
-    try:
-        page = urllib2.urlopen(req, timeout = 15)
-        content = page.read()
-        # logger.info(self.content)
-    except Exception,e:
-        logger.info("Error: " + str(e) + " URL: " + url)
-        content = 'FAIL'
-    return content
 
 class User():
     def __init__(self, user_id='81840abcd13b'):
@@ -41,23 +26,8 @@ class User():
         self.homepageUrl = BASE_URL + '/users/' + user_id + '/latest_articles'
         self.top_articles = BASE_URL + '/users/' + user_id + '/top_articles'
         self.dr = re.compile(r'<[^>]+>',re.S) # 用于去除html的标签，得到正文内容
-        self.content = self.get_content(self.homepageUrl)
+        self.content = get_content(self.homepageUrl)
 
-    def get_content(self, url):
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36",
-            'Host' : 'www.jianshu.com',
-        }
-        # logger.info(headers)
-        req = urllib2.Request(url = url, headers = headers)
-        try:
-            page = urllib2.urlopen(req, timeout = 15)
-            content = page.read()
-            # logger.info(self.content)
-        except Exception,e:
-            print "Error: " + str(e) + " URL: " + url
-            content = 'FAIL'
-        return content
 
     def get_user_info(self):
         if self.content == "FAIL":
@@ -92,7 +62,7 @@ class User():
         while True:
             url = self.homepageUrl + '?page=' + str(page)
             page += 1
-            content = self.get_content(url)
+            content = get_content(url)
             soup = BeautifulSoup(content, 'lxml')
             articles = soup.find('ul', attrs={'class':'article-list latest-notes'}).findAll('li')
             # logger.info(len(articles))
@@ -114,7 +84,7 @@ class User():
         while True:
             url = followers_url + '?page=' + str(page)
             page+=1
-            content = self.get_content(url=url)
+            content = get_content(url=url)
             soup = BeautifulSoup(content, 'lxml')
 
             followers = soup.find('ul', attrs={'class':'users'}).findAll('li')
@@ -133,7 +103,7 @@ class User():
         while True:
             url = following_url + '?page=' + str(page)
             page+=1
-            content = self.get_content(url=url)
+            content = get_content(url=url)
             soup = BeautifulSoup(content, 'lxml')
 
             followings = soup.find('ul', attrs={'class':'users'}).findAll('li')
@@ -145,42 +115,19 @@ class User():
                 following_list.append(following_id)
                 logger.info(following_id)
 
+
 class Article():
-    def __init__(self, article_id = '22998509f00c'):
+    def __init__(self, article_id = '0126131adfe7'):
         self.article_id = article_id
         self.pageUrl = BASE_URL + '/p/' + article_id
         self.dr = re.compile(r'<[^>]+>',re.S) # 用于去除html的标签，得到正文内容
-        self.get_content()
+        self.content = get_content(url=self.pageUrl)
 
-    def get_content(self):
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.82 Safari/537.36",
-            'Host' : 'www.jianshu.com',
-        }
-        logger.info(headers)
-        req = urllib2.Request(url = self.pageUrl,headers = headers)
-        try:
-            page = urllib2.urlopen(req,timeout = 15)
-            # headers = page.info()
-            self.content = page.read()
-            # logger.info(content)
-        except Exception,e:
-            print "Error: " + str(e) + " URL: " + self.pageUrl
-            self.content = 'FAIL'
-            return "FAIL"
-        return self.content
 
     def get_article_text(self, delete_tag = True, delete_wrap = True):
         if self.content == 'FAIL':
             return None
         soup = BeautifulSoup(self.content, 'lxml')
-        # info = soup.find('div', attrs={'class':'meta-top'})
-        # wordage = info.find('span', attrs={'class':'wordage'})
-        # view_count = info.find('span', attrs={'class':'view-count'})
-        # comment_count = info.find('span', attrs={'class':'comment-count'})
-        # likes_count = info.find('span', attrs={'class':'likes-count'})
-        # logger.info(likes_count)
-
         title = soup.find('div', attrs={'class':'article'}).find('h1',attrs={'class':'title'}).string
         logger.info(title)
         text = soup.find('div', attrs={'class': 'article'}).find('div', attrs={'class':'show-content'})
@@ -192,41 +139,48 @@ class Article():
         logger.info(text)
         return title, text
 
-    def get_all_imageUrl(self):
-        #TODO
-        pass
+    def get_base_info(self):
+        if self.content == 'FAIL':
+            return None
+        soup = BeautifulSoup(self.content, 'lxml')
+        note = soup.find('script', attrs={'data-name':'note'}).string
+        note_json = json.loads(note, encoding='GB2312')
 
+        wordage = int(note_json['wordage'])
+        views_count = int(note_json['views_count'])
+        comments_count = int(note_json['comments_count'])
+        likes_count = int(note_json['likes_count'])
+        rewards_total_count = int(note_json['rewards_total_count'])
 
+        base_info ={
+            'wordage':wordage,
+            'views_count':views_count,
+            'comments_count':comments_count,
+            'likes_count':likes_count,
+            'rewards_total_count': rewards_total_count
+        }
+        return base_info
 
-def get_article(url):
-    '''获取文章的通用函数
-    '''
-    articles_list = []
-    content = get_content(url)
-    soup = BeautifulSoup(content, 'lxml')
-    if content == 'FAIL':
-        return articles_list
-    arts = soup.findAll('h4', attrs={'class':'title'})
-    footers = soup.findAll('div', attrs={'class':'list-footer'})
+    def get_all_imageUrl(self, saveImage = True, path = None):
+        '''获取文章中的所有图片链接
+        saveImage: 是否下载所有的图片
+        path: 下载路径
+        '''
+        if self.content == 'FAIL':
+            return
+        imagesUrl_list = []
+        soup = BeautifulSoup(self.content, 'lxml')
+        images = soup.findAll('div', attrs={'class':'image-package'})
+        logger.info(u'这篇文章一共有 %d 幅图片。' % len(images))
+        for img in images:
+            img_url = img.img['src']
+            # logger.info(img_url)
+            imagesUrl_list.append(img_url)
 
-    if not arts or not footers:
-        return articles_list
-    for art, footer in zip(arts, footers):
-        # logger.info(art)
-        art_id = art.a['href'].replace('/p/','')
-        logger.info(art.a.string)
+        if saveImage:
+            saveImagesFromUrl(imagesUrl_list, self.article_id if path is None else path)
+        return imagesUrl_list
 
-        a_list = footer.findAll('a')
-        views_count = int(re.sub("\D", "", a_list[0].string.strip()))
-        comments_count = int(re.sub("\D", "", a_list[1].string.strip()))
-        span_list = footer.findAll('span')
-        likes_count = int(re.sub("\D", "", span_list[0].string.strip()))
-        if len(span_list) < 2:
-            rewards_count = 0
-        else:
-            rewards_count = int(re.sub("\D", "", span_list[1].string.strip()))
-        articles_list.append({'id':art_id, 'views':views_count, 'comments':comments_count, 'likes':likes_count, 'rewards':rewards_count})
-    return articles_list
 
 class Notebooks():
     def __init__(self, notebook_id='4084323'):
@@ -322,7 +276,7 @@ class Collection():
         while True:
             url = self.collectionUrl + '/subscribers?page=' + str(page)
             page+=1
-            content = self.get_content(url=url)
+            content = get_content(url=url)
             soup = BeautifulSoup(content, 'lxml')
             subs = soup.findAll('a', attrs={'class':'avatar'})
             if not subs:
@@ -346,14 +300,14 @@ class HomePage():
             soup = BeautifulSoup(content, 'lxml')
             collections = soup.findAll('a', attrs={'class':'avatar'})
             if not collections:
-                logger.info('一共获取 %d 个专题' % len(collection_list))
+                logger.info(u'一共获取 %d 个专题' % len(collection_list))
                 return collection_list
             for coll in collections:
                 coll_id = coll['href'].replace('/collection/', '')
                 logger.info(coll_id)
                 collection_list.append(coll_id)
                 if len(collection_list) >= max_get:
-                    logger.info('一共获取 %d 个专题' % len(collection_list))
+                    logger.info(u'一共获取 %d 个专题' % len(collection_list))
                     return collection_list
 
         return collection_list
@@ -364,11 +318,13 @@ if __name__ == '__main__':
 
     logging.basicConfig(format='%(asctime)s : %(threadName)s : %(levelname)s : %(message)s', level=logging.INFO)
     logging.info("running %s" % " ".join(sys.argv))
-    # art = Article(article_id = '22998509f00c', user_id='81840abcd13b')
+    art = Article()
     # art.get_article_text()
+    art.get_base_info()
 
     # user = User()
     # user.get_following()
+
     # collection = Collection('1b6650d03fbd')
     # collection.get_article_list()
 
@@ -376,7 +332,7 @@ if __name__ == '__main__':
     # note.get_article_list()
     # logger.info('hahaha')
 
-    home = HomePage()
-    home.get_collection_list()
+    # home = HomePage()
+    # home.get_collection_list()
 
     pass
