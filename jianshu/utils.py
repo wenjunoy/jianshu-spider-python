@@ -43,14 +43,15 @@ def get_article(content=''):
         logger.debug(art_name)
 
         a_list = footer.findAll('a')
-        views_count = int(re.sub("\D", "", a_list[0].string.strip()))
-        comments_count = int(re.sub("\D", "", a_list[1].string.strip()))
+        views_count = a_list[0].string
+        views_count = int(re.sub("\D", "", views_count.strip())) if views_count else 0
+        comments_count = a_list[1].string
+        comments_count = int(re.sub("\D", "", comments_count.strip())) if comments_count else 0
         span_list = footer.findAll('span')
-        likes_count = int(re.sub("\D", "", span_list[0].string.strip()))
-        if len(span_list) < 2:
-            rewards_count = 0
-        else:
-            rewards_count = int(re.sub("\D", "", span_list[1].string.strip()))
+        likes_count = span_list[0].string
+        likes_count = int(re.sub("\D", "", likes_count.strip())) if likes_count else 0
+        rewards_count = 0 if len(span_list) < 2 else int(re.sub("\D", "", span_list[1].string.strip()))
+
         articles_list.append({'id':art_id, 'views':views_count, 'comments':comments_count, 'likes':likes_count, 'rewards':rewards_count})
     return articles_list
 

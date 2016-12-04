@@ -97,6 +97,29 @@ class User(object):
                 return bookmarks_list
             bookmarks_list.extend(page_arts)
 
+    def get_subscription_notes(self, max_get=100):
+        '''获取关注专题列表的最新max_get篇文章，需要设置cookie
+        '''
+        article_list = []
+        load_more_url = '/subscription_notes'
+        while True:
+            url = BASE_URL + load_more_url
+            content = get_content(url, COOKIE)
+            if content == 'FAIL':
+                logger.warning(u'失败')
+                return
+            # logger.info(content)
+            page_arts = get_article(content)
+
+            soup = BeautifulSoup(content, 'lxml')
+            load_more_url = soup.find('button', attrs={'class':'ladda-button'})['data-url']
+            logger.info(load_more_url)
+            if len(page_arts) == 0 or len(article_list) >= max_get or (not load_more_url):
+                logger.info(u'一共获取 %d 篇文章' % len(article_list))
+                return article_list
+            article_list.extend(page_arts)
+
+
 
     def get_user_info(self):
         '''获取用户的基本信息 (user_name, user_intro, followees, followers, articles, write_words, likes)
@@ -205,6 +228,8 @@ class Article(object):
         self.soup = BeautifulSoup(self.content, 'lxml')
 
     def get_article_text(self, delete_tag = True, delete_wrap = True):
+        '''获取该文章的内容，delete_tag:删除网页标签，delete_wrap 删除文章的换行，一篇文章为一行
+        '''
         if self.content == 'FAIL':
             return None
         title = self.soup.find('div', attrs={'class':'article'}).find('h1',attrs={'class':'title'}).string
@@ -355,7 +380,7 @@ class Collection(object):
         while True:
             url = BASE_URL + '/collections/'+str(num_id)+'/notes?order_by=' + order_by + '&page=' + str(page)
             page += 1
-            content = get_content(content)
+            content = get_content(url)
             page_arts = get_article(content)
 
             for page_art in page_arts:
@@ -426,38 +451,6 @@ class HomePage(object):
     def __init__(self):
         self.collection = BASE_URL + '/collections'
 
-    def get_articles_hot():
-        pass
-
-    def get_novel_selection():
-        '''http://www.jianshu.com/recommendations/notes?category_id=66&_=1479483058683
-        data-category-id:
-        66 : 小说精选
-        70 : 摄影游记
-        68 : 漫画手绘
-        67 : 简约作者
-        56 : 新上榜
-        60 : 日报
-        65 : 专题精选
-        61 : 有奖活动
-        62 : 简书出版
-        63 : 简书播客
-
-        data-dimension
-        now : 热门
-        weekly : 七日热门
-        monthly : 三十日热门
-        '''
-        recom_url = BASE_URL + '/recommendations/notes'
-
-        pass
-
-    def get_articles_7days_hot():
-        pass
-
-    def get_articles_30days_hot():
-        pass
-
     def get_collections_hot(self, order_by='score', max_get = 100000):
         '''order_by : {score（热门排序）, likes_count（关注度）}
         return [{id, name}, ...]
@@ -511,15 +504,16 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s : %(threadName)s : %(levelname)s : %(message)s', level=logging.DEBUG)
     logging.info("running %s" % " ".join(sys.argv))
     # art = Article()
-    # # art.get_article_text()
+    # art.get_article_text()
     # art.get_base_info()
 
     user = User()
     # user.Login('http://www.jianshu.com/favourites')
-    user.get_notifications()
+    # user.get_notifications()
     # user.get_favourites_articles()
-    user.get_bookmarks_articles()
+    # user.get_bookmarks_articles()
     # user.get_following()
+    user.get_subscription_notes()
 
     # collection = Collection('1b6650d03fbd')
     # collection.get_article_list()
@@ -535,6 +529,3 @@ if __name__ == '__main__':
 
     # zo = Zodiac()
     # zo.get_articles()
-
-
-    pass
