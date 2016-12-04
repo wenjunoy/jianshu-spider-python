@@ -386,7 +386,8 @@ class Collection(object):
             for page_art in page_arts:
                 art = Article(page_art['id'])
                 title, text = art.get_article_text(delete_wrap =True)
-                fout.write(text+'\n')
+                if fout!=None:
+                    fout.write(text+'\n')
 
             if len(page_arts) == 0 or len(articles_list) > max_get:
                 logger.info(u'专题 %s 一共获取 %d 篇文章' % (coll_name, len(articles_list)) )
