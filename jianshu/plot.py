@@ -15,25 +15,25 @@ article = defaultdict(int)
 
 from jianshu import User
 
-user = User()
-data = user.get_notifications()
+def draw_noti(user_id='81840abcd13b'):
+    user = User(user_id)
+    data = user.get_notifications()
+    for i in data:
+        time = i['time'].split(' ')[0]
+        if i['token'] == 'heart':
+            like[time] += 1
+        elif i['token'] == 'check':
+            focus[time] += 1
+        elif i['token'] == 'square':
+            article[time] += 1
 
-for i in data:
-    time = i['time'].split(' ')[0]
-    if i['token'] == 'heart':
-        like[time] += 1
-    elif i['token'] == 'check':
-        focus[time] += 1
-    elif i['token'] == 'square':
-        article[time] += 1
 
+    for i,c in zip([like, focus, article], ['b-', 'r--', 'go']):
+        i = sorted(i.items(), key = lambda x : x[0])
+        print i
+        x = [datetime.datetime.strptime(j[0],'%Y-%m-%d') for j in i]
+        y = [j[1] for j in i]
+        plt.plot_date(x, y, c)
 
-for i,c in zip([like, focus, article], ['b-', 'r--', 'go']):
-    i = sorted(i.items(), key = lambda x : x[0])
-    print i
-    x = [datetime.datetime.strptime(j[0],'%Y-%m-%d') for j in i]
-    y = [j[1] for j in i]
-    plt.plot_date(x, y, c)
-
-plt.savefig('1.jpg',dpi=600)
-plt.show()
+    plt.savefig('1.jpg',dpi=600)
+    plt.show()
